@@ -42,14 +42,7 @@ public class GeminiTranslationProvider implements TranslationProvider {
 
     @Override
     public String translate(String prompt) {
-        HttpRequest request = HttpRequest.newBuilder(URI.create(BASE_URL + model + ":generateContent"))
-                .timeout(REQUEST_TIMEOUT)
-                .header("Content-Type", "application/json")
-                .header("x-goog-api-key", apiKey) // in a header, never in the URL, so it never shows up in logs
-                .POST(HttpRequest.BodyPublishers.ofString(requestBody(prompt)))
-                .build();
-
-        HttpResponse<String> response = send(request);
+        HttpResponse<String> response = send(buildRequest(prompt));
         int status = response.statusCode();
         if (status == 429) {
             LOG.warning("Gemini rate limit hit (HTTP 429)");
@@ -65,6 +58,23 @@ public class GeminiTranslationProvider implements TranslationProvider {
     @Override
     public String name() {
         return "gemini";
+    }
+
+    private HttpRequest buildRequest(String prompt) {
+        try {
+            return HttpRequest.newBuilder(URI.create(BASE_URL + model + ":generateContent"))
+                    .timeout(REQUEST_TIMEOUT)
+                    .header("Content-Type", "application/json")
+                    .header("x-goog-api-key", apiKey) // in a header, never in the URL, so it never shows up in logs
+                    .POST(HttpRequest.BodyPublishers.ofString(requestBody(prompt)))
+                    .build();
+        } catch (IllegalArgumentException e) {
+            // A typo in server.env (spaces, < >, quotes) makes the URL or header invalid.
+            // The exception message is not logged or returned because it would echo the configured values.
+            LOG.warning("Gemini request could not be built: check GEMINI_MODEL and GEMINI_API_KEY in server.env");
+            throw new ProviderException(
+                    "The translation model is misconfigured on the server (check GEMINI_MODEL and GEMINI_API_KEY).");
+        }
     }
 
     private HttpResponse<String> send(HttpRequest request) {
