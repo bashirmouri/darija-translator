@@ -52,7 +52,9 @@ APP_USERNAME=choose-a-username
 APP_PASSWORD=choose-a-password
 ```
 
-Write the values as plain text: no quotes, no `< >`, no spaces around `=`. `GEMINI_MODEL` is the exact
+Write the values as plain text: no quotes, no `< >`, no spaces around `=`. On Windows, Liberty's start
+script drops `!` and mangles non-ASCII characters in `server.env`, so keep the username and password to
+ASCII letters, digits and punctuation other than `!`. `GEMINI_MODEL` is the exact
 model name shown in Google AI Studio. `APP_USERNAME` / `APP_PASSWORD` are the Basic Auth credentials every
 client must send.
 
@@ -82,7 +84,37 @@ mvn liberty:run        # run without dev mode (Ctrl+C to stop)
 
 ### Chrome extension
 
-_TODO_
+Plain JavaScript, Manifest V3, no build step. Files in [`extension/`](extension/):
+
+| File | Role |
+|---|---|
+| `manifest.json` | permissions `contextMenus`, `sidePanel`, `storage`; `host_permissions` for `http://localhost:9080/*` |
+| `background.js` | service worker: "Translate to Darija" context-menu item, opens the side panel |
+| `sidepanel.html/.js/.css` | the translator UI |
+| `options.html/.js` | server URL, username, password, default script, "Test connection" |
+| `api.js` | REST calls and error messages (shared) |
+| `speech.js` | read aloud |
+
+**Install**
+
+1. Start the server (see above).
+2. Open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked** and pick the `extension/` folder.
+3. Click the puzzle icon → pin **Darija Translator**. Right-click the icon → **Options**: enter the server URL
+   (`http://localhost:9080`), the `APP_USERNAME` / `APP_PASSWORD` values, then **Test connection** and **Save**.
+4. After changing extension code, click the reload ↻ button on the extension card.
+
+**Use**
+
+- Select text on any web page → right-click → **Translate to Darija**. The side panel opens with the text
+  filled in and translates it immediately. Selecting more text while the panel is open translates the new text.
+- Or click the toolbar icon to open the panel and type text (Ctrl+Enter translates).
+- **العربية / Arabizi** switches the output script (and re-translates). **Copy** copies the result.
+- **Read aloud** uses an `ar-MA` voice if installed, otherwise any Arabic voice. On Windows, add one via
+  *Settings → Time & language → Speech → Add voices → Arabic*, then restart Chrome.
+
+**Using another server address** (e.g. the PC's LAN IP): add it to `host_permissions` in `manifest.json`,
+for example `"http://192.168.1.20:9080/*"`, reload the extension, then set the same URL in the options.
+Without the permission Chrome blocks the request and the panel reports "Server not reachable".
 
 ### PHP client
 
