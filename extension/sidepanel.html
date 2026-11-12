@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Darija Translator</title>
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <header>
+    <h1>Darija Translator</h1>
+    <button type="button" id="options-button" class="link">Settings</button>
+  </header>
+
+  <label for="source-text">Text to translate</label>
+  <textarea id="source-text" placeholder="Select text on a page, right-click → “Translate to Darija”, or type here."></textarea>
+  <div class="row">
+    <div class="segmented" role="group" aria-label="Output script">
+      <button type="button" id="script-arabic" data-script="arabic" aria-pressed="true">العربية</button>
+      <button type="button" id="script-latin" data-script="latin" aria-pressed="false">Arabizi</button>
+    </div>
+    <span class="spacer"></span>
+    <button type="button" id="translate-button" class="primary">Translate</button>
+  </div>
+  <p class="hint">Ctrl+Enter to translate.</p>
+
+  <div id="result" class="result" dir="rtl" lang="ar" data-placeholder="The Darija translation appears here." aria-live="polite"></div>
+  <div class="row">
+    <button type="button" id="copy-button" disabled>Copy</button>
+    <button type="button" id="speak-button" disabled>Read aloud</button>
+  </div>
+
+  <div id="message" class="message" role="status" aria-live="polite"></div>
+
+  <script type="module" src="sidepanel.js"></script>
+</body>
+</html>
