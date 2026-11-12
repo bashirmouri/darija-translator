@@ -46,12 +46,20 @@ Open Liberty reads its configuration from environment variables (through MicroPr
 
 ```properties
 LLM_PROVIDER=gemini
-GEMINI_API_KEY=<your key>
-GEMINI_MODEL=<a current Flash model, as shown in Google AI Studio>
+GEMINI_API_KEY=paste-your-key-here
+GEMINI_MODEL=gemini-flash-model-name
+APP_USERNAME=choose-a-username
+APP_PASSWORD=choose-a-password
 ```
 
+Write the values as plain text: no quotes, no `< >`, no spaces around `=`. `GEMINI_MODEL` is the exact
+model name shown in Google AI Studio. `APP_USERNAME` / `APP_PASSWORD` are the Basic Auth credentials every
+client must send.
+
 Alternatively, export the same variables in your shell before starting the server.
-If `GEMINI_API_KEY` or `GEMINI_MODEL` is missing, the application fails to start and the log names the missing property.
+If a required variable is missing or empty, the application does not start and the log names it
+(e.g. `Failed to Inject @ConfigProperty for key APP_PASSWORD`); values are never logged.
+After editing `server.env`, restart the server (dev mode does not reload it).
 
 ## Running
 
@@ -92,6 +100,8 @@ _TODO_
 
 ### `POST /api/translate`
 
+Requires HTTP Basic authentication (`Authorization: Basic <base64(username:password)>`).
+
 Request (`Content-Type: application/json`):
 
 ```json
@@ -110,12 +120,12 @@ Success — `200`:
 { "translation": "فين كاينة لاگار؟", "provider": "gemini" }
 ```
 
-Errors always have the body `{ "error": "<message>" }`:
+Errors have the body `{ "error": "<message>" }` (except 401, see below):
 
 | Status | When |
 |---|---|
 | 400 | `text` missing, blank or longer than 5,000 characters; invalid `script`; malformed JSON |
-| 401 | missing or wrong credentials |
+| 401 | missing or wrong credentials (empty body plus a `WWW-Authenticate: Basic realm="darija"` header; sent by Jakarta Security before the application code runs) |
 | 429 | the LLM provider's rate limit was hit — wait and retry |
 | 502 | the LLM call failed, timed out or returned no text |
 
@@ -125,25 +135,32 @@ No authentication. `200 { "status": "ok", "provider": "gemini" }`.
 
 ### curl examples
 
-(Git Bash, macOS or Linux. In PowerShell, call `curl.exe` and put the JSON in a file with `-d @body.json`.)
+(Git Bash, macOS or Linux. Replace `USER:PASS` with the values of `APP_USERNAME` / `APP_PASSWORD`.
+In Windows `cmd`, use double quotes and escape the inner ones: `-d "{\"text\": \"Hello\"}"`.)
 
 ```bash
 # Health check
 curl http://localhost:9080/api/health
 
 # Translate into Arabic script
-curl -X POST http://localhost:9080/api/translate \
+curl -X POST http://localhost:9080/api/translate -u USER:PASS \
   -H "Content-Type: application/json" \
   -d '{"text": "Where is the train station?", "sourceLang": "en"}'
 
 # Translate into Arabizi
-curl -X POST http://localhost:9080/api/translate \
+curl -X POST http://localhost:9080/api/translate -u USER:PASS \
   -H "Content-Type: application/json" \
   -d '{"text": "I am going to the market to buy bread.", "script": "latin"}'
 
 # 400: blank text
-curl -X POST http://localhost:9080/api/translate \
+curl -X POST http://localhost:9080/api/translate -u USER:PASS \
   -H "Content-Type: application/json" -d '{"text": "  "}'
+
+# 401: no credentials, then a wrong password (-i shows the status line)
+curl -i -X POST http://localhost:9080/api/translate \
+  -H "Content-Type: application/json" -d '{"text": "Hello"}'
+curl -i -X POST http://localhost:9080/api/translate -u USER:wrong-password \
+  -H "Content-Type: application/json" -d '{"text": "Hello"}'
 ```
 
 A Postman collection with the same requests (and test assertions) is in
@@ -152,7 +169,14 @@ Import it, then set the `baseUrl`, `username` and `password` collection variable
 
 ## Security notes
 
-_TODO_
+- **Basic Auth over plain HTTP is acceptable only on a trusted local network** (home or campus Wi-Fi for the demo).
+  Credentials are base64-encoded, not encrypted; anyone on the network can read them. A real deployment needs HTTPS.
+- The server listens on all interfaces (`host="*"`) so the phone can reach it over Wi-Fi.
+- One user, configured with `APP_USERNAME` / `APP_PASSWORD`; passwords are compared in constant time.
+- `/api/health` is public; `/api/translate` requires the `user` role.
+- Secrets live only in `server/src/main/liberty/config/server.env` or shell variables, both outside git
+  (`.gitignore` covers `.env`, `server.env` and `php/config.php`). The Gemini key is sent in the
+  `x-goog-api-key` header, never in a URL, and neither keys, passwords nor the text to translate are logged.
 
 ## Screenshots
 
