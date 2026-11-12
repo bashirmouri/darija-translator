@@ -21,12 +21,14 @@ participant "Gemini API" as Gemini
 
 User -> Menu : select text, right-click\n"Translate to Darija"
 Menu -> SW : contextMenus.onClicked(info.selectionText)
-SW -> Store : set({ text })
-SW -> Panel : sidePanel.open({ tabId })
+SW -> Store : set({ pendingSelection: { text, requestedAt } })
+SW -> Panel : sidePanel.open({ windowId })\n(synchronously, keeps the user gesture)
 activate Panel
-Panel -> Store : get("text")
-Store --> Panel : text
 Panel -> Panel : load server URL + credentials\n(chrome.storage.local)
+Panel -> Store : get("pendingSelection")\n(or storage.onChanged if already open)
+Store --> Panel : text
+Panel -> Store : remove("pendingSelection")
+Panel -> Panel : fill text box
 
 Panel -> Sec : POST /api/translate\nAuthorization: Basic …\n{ text, script }
 activate Sec
