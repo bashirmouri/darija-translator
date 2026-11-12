@@ -31,8 +31,21 @@ package "com.darija.translator" {
       consumes / produces JSON
     end note
 
+    class HealthResource <<@Path("/health")>> {
+      - provider : TranslationProvider
+      + health() : JsonObject
+    }
+    note right of HealthResource
+      @PermitAll
+      GET /api/health
+    end note
+
     class TranslationExceptionMapper {
       + toResponse(e : TranslationException) : Response
+    }
+
+    class InvalidJsonExceptionMapper {
+      + toResponse(e : JsonbException) : Response
     }
   }
 
@@ -40,7 +53,7 @@ package "com.darija.translator" {
     class TranslationRequest {
       - text : String
       - sourceLang : String
-      - script : Script
+      - script : String
     }
     class TranslationResponse {
       - translation : String
@@ -52,6 +65,7 @@ package "com.darija.translator" {
     enum Script {
       ARABIC
       LATIN
+      + {static} fromValue(value : String) : Script
     }
   }
 
@@ -79,7 +93,7 @@ package "com.darija.translator" {
       + produce() : TranslationProvider
     }
     class PromptBuilder {
-      - fewShotExamples : List<String>
+      - fewShotExamples : List<Example>
       + build(text : String, sourceLang : String, script : Script) : String
     }
   }
@@ -112,13 +126,15 @@ package "com.darija.translator" {
 TranslatorApplication -up-|> Application
 AppIdentityStore .up.|> IdentityStore
 TranslationExceptionMapper .up.|> ExceptionMapper
+InvalidJsonExceptionMapper .up.|> ExceptionMapper
 
 TranslatorResource --> "1" TranslationProvider : <<inject>>
 TranslatorResource --> "1" PromptBuilder : <<inject>>
 TranslatorResource ..> TranslationRequest : receives
 TranslatorResource ..> TranslationResponse : returns
 
-TranslationRequest --> Script
+TranslatorResource ..> Script : parses request.script
+HealthResource --> "1" TranslationProvider : <<inject>>
 
 GeminiTranslationProvider ..|> TranslationProvider
 OllamaTranslationProvider ..|> TranslationProvider
@@ -132,6 +148,7 @@ ProviderException -up-|> TranslationException
 
 TranslationExceptionMapper ..> TranslationException : handles
 TranslationExceptionMapper ..> ErrorResponse : returns
+InvalidJsonExceptionMapper ..> ErrorResponse : returns
 
 SecurityConfig ..> AppIdentityStore : uses
 @enduml
