@@ -2,6 +2,7 @@ package com.darija.translator.rest;
 
 import com.darija.translator.llm.TranslationProvider;
 
+import jakarta.annotation.security.PermitAll;
 import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
 import jakarta.json.Json;
@@ -11,7 +12,7 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 
-/** GET /api/health: lets clients check that the server is reachable and which LLM it uses. */
+/** GET /api/health: lets clients check that the server is reachable and which LLM it uses. No authentication. */
 @Path("/health")
 @RequestScoped
 public class HealthResource {
@@ -20,6 +21,7 @@ public class HealthResource {
     TranslationProvider provider;
 
     @GET
+    @PermitAll
     @Produces(MediaType.APPLICATION_JSON)
     public JsonObject health() {
         return Json.createObjectBuilder()

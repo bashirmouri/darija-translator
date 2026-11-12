@@ -7,6 +7,7 @@ import com.darija.translator.error.InvalidRequestException;
 import com.darija.translator.llm.PromptBuilder;
 import com.darija.translator.llm.TranslationProvider;
 
+import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
@@ -16,7 +17,7 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
-/** POST /api/translate: translates the request text into Moroccan Darija. */
+/** POST /api/translate: translates the request text into Moroccan Darija. Requires Basic Auth. */
 @Path("/translate")
 @RequestScoped
 public class TranslatorResource {
@@ -30,6 +31,7 @@ public class TranslatorResource {
     PromptBuilder promptBuilder;
 
     @POST
+    @RolesAllowed("user")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public Response translate(TranslationRequest request) {
