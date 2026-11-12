@@ -1,0 +1,22 @@
+# Build output
+target/
+
+# Node / Expo
+node_modules/
+.expo/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Secrets (never commit)
+.env
+server.env
+php/config.php
+
+# OS / IDE
+.DS_Store
+.idea/
+*.iml
+.vscode/
