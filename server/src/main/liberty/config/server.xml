@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<server description="Darija Translator">
+
+    <featureManager>
+        <feature>restfulWS-3.1</feature>
+        <feature>jsonb-3.0</feature>
+        <feature>jsonp-2.1</feature>
+        <feature>cdi-4.0</feature>
+        <feature>mpConfig-3.1</feature>
+    </featureManager>
+
+    <!-- host="*" so a phone on the same Wi-Fi can reach the service. HTTP only: trusted LAN use. -->
+    <httpEndpoint id="defaultHttpEndpoint" host="*" httpPort="${http.port}" httpsPort="-1"/>
+
+    <webApplication location="darija-translator.war" contextRoot="/"/>
+
+    <!-- Keep the dev-mode log quiet: no request details at INFO level. -->
+    <logging consoleLogLevel="INFO"/>
+</server>
