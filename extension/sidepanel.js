@@ -1,4 +1,5 @@
 import { loadSettings, translate } from "./api.js";
+import { speak, stopSpeaking, isSpeaking } from "./speech.js";
 
 const MAX_LENGTH = 5000; // same limit as the server
 
@@ -92,6 +93,7 @@ function setScript(value) {
 }
 
 function showResult(text) {
+  stopSpeaking();
   result.textContent = text;
   // Arabic script reads right-to-left; Arabizi uses Latin letters and reads left-to-right.
   result.dir = script === "latin" ? "ltr" : "rtl";
@@ -139,6 +141,28 @@ copyButton.addEventListener("click", async () => {
   } catch {
     show("Could not copy. Select the text and press Ctrl+C.", "error");
   }
+});
+
+speakButton.addEventListener("click", async () => {
+  if (isSpeaking()) {
+    stopSpeaking();
+    return;
+  }
+  if (result.lang !== "ar") {
+    // Arabic voices cannot read Arabizi (they would say "three" for the 3 in "3afak").
+    show("Read aloud needs Arabic script: switch to العربية and translate again.", "info");
+    return;
+  }
+  const voice = await speak(result.textContent, () => (speakButton.textContent = "Read aloud"));
+  if (!voice) {
+    show(
+      "No Arabic voice is installed. On Windows: Settings → Time & language → Speech → Add voices → Arabic, then restart Chrome.",
+      "error"
+    );
+    return;
+  }
+  speakButton.textContent = "Stop";
+  show(`Reading with ${voice.name} (${voice.lang}).`, "info");
 });
 
 document.getElementById("options-button").addEventListener("click", () => chrome.runtime.openOptionsPage());
