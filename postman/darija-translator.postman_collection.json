@@ -1,0 +1,178 @@
+{
+  "info": {
+    "name": "Darija Translator API",
+    "description": "Requests for the Darija Translator REST service. Set the collection variables baseUrl, username and password before running (never commit real values).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "basic",
+    "basic": [
+      { "key": "username", "value": "{{username}}", "type": "string" },
+      { "key": "password", "value": "{{password}}", "type": "string" }
+    ]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:9080" },
+    { "key": "username", "value": "" },
+    { "key": "password", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "auth": { "type": "noauth" },
+        "method": "GET",
+        "url": "{{baseUrl}}/api/health"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "pm.test('status is ok', () => pm.expect(pm.response.json().status).to.eql('ok'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Translate (Arabic script) - 200",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"text\": \"Where is the train station?\",\n  \"sourceLang\": \"en\",\n  \"script\": \"arabic\"\n}"
+        },
+        "url": "{{baseUrl}}/api/translate"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "pm.test('has a translation', () => pm.expect(pm.response.json().translation).to.be.a('string').and.not.empty);",
+              "pm.test('uses Arabic letters', () => pm.expect(pm.response.json().translation).to.match(/[\\u0600-\\u06FF]/));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Translate (Arabizi, script=latin) - 200",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"text\": \"I am going to the market to buy bread.\",\n  \"script\": \"latin\"\n}"
+        },
+        "url": "{{baseUrl}}/api/translate"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "pm.test('no Arabic letters', () => pm.expect(pm.response.json().translation).to.not.match(/[\\u0600-\\u06FF]/));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Blank text - 400",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"text\": \"   \"\n}" },
+        "url": "{{baseUrl}}/api/translate"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+              "pm.test('has an error message', () => pm.expect(pm.response.json().error).to.be.a('string').and.not.empty);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Text too long (5,001 chars) - 400",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"text\": \"{{longText}}\"\n}" },
+        "url": "{{baseUrl}}/api/translate"
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": ["pm.variables.set('longText', 'a'.repeat(5001));"]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+              "pm.test('mentions the limit', () => pm.expect(pm.response.json().error).to.include('too long'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Invalid script - 400",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"text\": \"Hello\",\n  \"script\": \"cyrillic\"\n}" },
+        "url": "{{baseUrl}}/api/translate"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": ["pm.test('400 Bad Request', () => pm.response.to.have.status(400));"]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Malformed JSON - 400",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{ \"text\": " },
+        "url": "{{baseUrl}}/api/translate"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+              "pm.test('JSON error body', () => pm.expect(pm.response.json()).to.have.property('error'));"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
