@@ -1,0 +1,42 @@
+@startuml use-case-diagram
+' Darija Translator — use case diagram
+skinparam shadowing false
+skinparam packageStyle rectangle
+left to right direction
+title Darija Translator — Use Case Diagram
+
+actor "User" as user
+actor "Tester\n(Postman / cURL)" as tester
+actor "LLM provider\n(Gemini / Ollama)" as llm <<system>>
+
+rectangle "Darija Translator" {
+  usecase "Translate text\nto Darija" as UC_translate
+  usecase "Translate selected\nweb-page text" as UC_select
+  usecase "Type or paste text\nto translate" as UC_type
+  usecase "Speak text to translate\n(voice input)" as UC_voice
+  usecase "Listen to the translation\n(read aloud)" as UC_listen
+  usecase "Choose output script\n(Arabic / Arabizi)" as UC_script
+  usecase "Configure server URL\nand credentials" as UC_config
+  usecase "Authenticate\n(Basic Auth)" as UC_auth
+}
+
+user --> UC_select
+user --> UC_type
+user --> UC_voice
+user --> UC_listen
+user --> UC_config
+tester --> UC_translate
+
+UC_select ..> UC_translate : <<include>>
+UC_type ..> UC_translate : <<include>>
+UC_voice ..> UC_translate : <<include>>
+UC_script ..> UC_translate : <<extend>>
+UC_translate ..> UC_auth : <<include>>
+UC_translate --> llm
+
+note right of UC_select
+  Chrome extension:
+  right-click menu
+  opens the side panel
+end note
+@enduml

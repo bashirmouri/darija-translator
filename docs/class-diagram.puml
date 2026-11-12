@@ -1,0 +1,137 @@
+@startuml class-diagram
+' Darija Translator — server class diagram (package com.darija.translator)
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam nodesep 30
+skinparam ranksep 50
+hide empty members
+title Darija Translator — Class Diagram (REST service)
+
+package "jakarta (API)" #F4F4F4 {
+  abstract class Application <<jakarta.ws.rs.core>>
+  interface IdentityStore <<jakarta.security.enterprise>>
+  interface "ExceptionMapper<T>" as ExceptionMapper <<jakarta.ws.rs.ext>>
+}
+
+package "com.darija.translator" {
+
+  package rest {
+    class TranslatorApplication <<@ApplicationPath("/api")>> {
+    }
+
+    class TranslatorResource <<@Path("/translate")>> {
+      - provider : TranslationProvider
+      - promptBuilder : PromptBuilder
+      + translate(request : TranslationRequest) : Response
+    }
+    note right of TranslatorResource
+      @RolesAllowed("user")
+      POST /api/translate
+      consumes / produces JSON
+    end note
+
+    class TranslationExceptionMapper {
+      + toResponse(e : TranslationException) : Response
+    }
+  }
+
+  package dto {
+    class TranslationRequest {
+      - text : String
+      - sourceLang : String
+      - script : Script
+    }
+    class TranslationResponse {
+      - translation : String
+      - provider : String
+    }
+    class ErrorResponse {
+      - error : String
+    }
+    enum Script {
+      ARABIC
+      LATIN
+    }
+  }
+
+  package llm {
+    interface TranslationProvider {
+      + translate(prompt : String) : String
+      + name() : String
+    }
+    class GeminiTranslationProvider {
+      - httpClient : HttpClient
+      - apiKey : String
+      - model : String
+      + translate(prompt : String) : String
+      + name() : String
+    }
+    class OllamaTranslationProvider {
+      - httpClient : HttpClient
+      - baseUrl : String
+      - model : String
+      + translate(prompt : String) : String
+      + name() : String
+    }
+    class ProviderProducer <<@ApplicationScoped>> {
+      - llmProvider : String
+      + produce() : TranslationProvider
+    }
+    class PromptBuilder {
+      - fewShotExamples : List<String>
+      + build(text : String, sourceLang : String, script : Script) : String
+    }
+  }
+
+  package security {
+    class SecurityConfig <<@BasicAuthenticationMechanismDefinition>> {
+    }
+    class AppIdentityStore <<@ApplicationScoped>> {
+      - username : String
+      - password : String
+      + validate(c : UsernamePasswordCredential) : CredentialValidationResult
+    }
+  }
+
+  package error {
+    abstract class TranslationException {
+      + status() : int
+    }
+    class InvalidRequestException
+    class RateLimitException
+    class ProviderException
+  }
+  note bottom of TranslationException
+    400 InvalidRequestException (resource)
+    429 RateLimitException (provider)
+    502 ProviderException (provider)
+  end note
+}
+
+TranslatorApplication -up-|> Application
+AppIdentityStore .up.|> IdentityStore
+TranslationExceptionMapper .up.|> ExceptionMapper
+
+TranslatorResource --> "1" TranslationProvider : <<inject>>
+TranslatorResource --> "1" PromptBuilder : <<inject>>
+TranslatorResource ..> TranslationRequest : receives
+TranslatorResource ..> TranslationResponse : returns
+
+TranslationRequest --> Script
+
+GeminiTranslationProvider ..|> TranslationProvider
+OllamaTranslationProvider ..|> TranslationProvider
+ProviderProducer ..> TranslationProvider : creates
+PromptBuilder ..> Script
+
+
+InvalidRequestException -up-|> TranslationException
+RateLimitException -up-|> TranslationException
+ProviderException -up-|> TranslationException
+
+TranslationExceptionMapper ..> TranslationException : handles
+TranslationExceptionMapper ..> ErrorResponse : returns
+
+SecurityConfig ..> AppIdentityStore : uses
+@enduml

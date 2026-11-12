@@ -1,0 +1,76 @@
+@startuml sequence-diagram
+' Darija Translator — translating selected text from the Chrome extension
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+autonumber
+title Darija Translator — Sequence: translate selected text (Chrome extension)
+
+actor User
+participant "Chrome\ncontext menu" as Menu
+participant "Service worker\n(background.js)" as SW
+database "chrome.storage\n.session" as Store
+participant "Side panel\n(sidepanel.js)" as Panel
+box "Open Liberty server" #F7F7F7
+  participant "Jakarta Security\n(Basic Auth)" as Sec
+  participant "AppIdentityStore" as IdS
+  participant "TranslatorResource" as Res
+  participant "PromptBuilder" as PB
+  participant "GeminiTranslation\nProvider" as Prov
+end box
+participant "Gemini API" as Gemini
+
+User -> Menu : select text, right-click\n"Translate to Darija"
+Menu -> SW : contextMenus.onClicked(info.selectionText)
+SW -> Store : set({ text })
+SW -> Panel : sidePanel.open({ tabId })
+activate Panel
+Panel -> Store : get("text")
+Store --> Panel : text
+Panel -> Panel : load server URL + credentials\n(chrome.storage.local)
+
+Panel -> Sec : POST /api/translate\nAuthorization: Basic …\n{ text, script }
+activate Sec
+Sec -> IdS : validate(UsernamePasswordCredential)
+activate IdS
+IdS --> Sec : CredentialValidationResult
+deactivate IdS
+
+alt invalid credentials
+  Sec --> Panel : 401 Unauthorized
+  Panel -> User : show "check your credentials"
+else valid credentials
+  Sec -> Res : translate(request)
+  deactivate Sec
+  activate Res
+  alt text blank or > 5,000 chars
+    Res --> Panel : 400 { error }
+  else valid request
+    Res -> PB : build(text, sourceLang, script)
+    PB --> Res : prompt
+    Res -> Prov : translate(prompt)
+    activate Prov
+    Prov -> Gemini : POST models/{model}:generateContent\nx-goog-api-key
+    alt success
+      Gemini --> Prov : candidates[0].content
+      Prov --> Res : Darija text
+      deactivate Prov
+      Res --> Panel : 200 { translation, provider }
+      deactivate Res
+      Panel -> User : show translation
+      opt read aloud
+        User -> Panel : click speaker icon
+        Panel -> Panel : speechSynthesis.speak()\n(ar-MA voice, else ar)
+      end
+    else quota exceeded
+      Gemini --> Prov : 429
+      Prov --> Res : RateLimitException
+      Res --> Panel : 429 { error }
+    else LLM error
+      Gemini --> Prov : 5xx / empty
+      Prov --> Res : ProviderException
+      Res --> Panel : 502 { error }
+    end
+  end
+end
+deactivate Panel
+@enduml

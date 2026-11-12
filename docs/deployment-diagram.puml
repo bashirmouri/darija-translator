@@ -1,0 +1,55 @@
+@startuml deployment-diagram
+' Darija Translator — deployment diagram (demo setup on a home/campus LAN)
+skinparam shadowing false
+skinparam nodesep 40
+skinparam ranksep 70
+title Darija Translator — Deployment Diagram
+
+node "Developer PC\n(Windows / macOS / Linux)" as pc {
+
+  node "JVM 21" as jvm <<execution environment>> {
+    node "Open Liberty\n(embedded, liberty-maven-plugin)" as liberty <<web server>> {
+      artifact "darija-translator.war" as war
+      component "TranslatorResource\nPOST /api/translate" as res
+      component "Jakarta Security\nBasic Auth + IdentityStore" as sec
+    }
+  }
+
+  node "Google Chrome" as chrome <<browser>> {
+    artifact "Darija extension\n(Manifest V3)" as ext
+  }
+
+  node "PHP 8 built-in server\n:8000" as php <<execution environment>> {
+    artifact "index.php\n(cURL client)" as phpapp
+  }
+
+  node "Python 3 / Streamlit\n:8501" as py <<execution environment>> {
+    artifact "app.py\n(requests client)" as pyapp
+  }
+
+  node "Ollama :11434\n(optional, extra)" as ollama <<execution environment>> {
+    artifact "local LLM model" as localmodel
+  }
+
+  artifact ".env\n(API key, users)" as env
+}
+
+node "Smartphone\n(Android / iOS)" as phone {
+  node "Expo Go" as expo <<execution environment>> {
+    artifact "React Native app" as rn
+  }
+}
+
+cloud "Google Cloud" as google {
+  node "Gemini API\ngenerativelanguage.googleapis.com" as gemini <<external service>>
+}
+
+ext --> liberty : HTTP/JSON + Basic Auth\nlocalhost:9080
+phpapp --> liberty : HTTP/JSON + Basic Auth\nlocalhost:9080
+pyapp --> liberty : HTTP/JSON + Basic Auth\nlocalhost:9080
+rn --> liberty : HTTP/JSON + Basic Auth\nWi-Fi LAN <PC-IP>:9080
+
+liberty --> gemini : HTTPS REST :443\nx-goog-api-key
+liberty ..> ollama : HTTP :11434\n(LLM_PROVIDER=ollama)
+liberty ..> env : reads config
+@enduml
