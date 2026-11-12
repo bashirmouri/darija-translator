@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Darija Translator – Options</title>
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <main class="options">
+    <header>
+      <h1>Darija Translator – Options</h1>
+    </header>
+
+    <form id="settings-form" novalidate>
+      <label for="server-url">Server URL</label>
+      <input id="server-url" type="url" placeholder="http://localhost:9080" required>
+      <p class="hint">
+        Default <code>http://localhost:9080</code>. Any other address (e.g. your PC's LAN IP) must also be
+        added to <code>host_permissions</code> in <code>manifest.json</code>, then reload the extension.
+      </p>
+
+      <label for="username">Username</label>
+      <input id="username" type="text" autocomplete="username" required>
+
+      <label for="password">Password</label>
+      <input id="password" type="password" autocomplete="current-password" required>
+
+      <label for="default-script">Default output script</label>
+      <select id="default-script">
+        <option value="arabic">Arabic script (العربية)</option>
+        <option value="latin">Arabizi – Latin letters (3, 7, 9)</option>
+      </select>
+
+      <div class="row">
+        <button type="submit" class="primary">Save</button>
+        <button type="button" id="test-button">Test connection</button>
+      </div>
+    </form>
+
+    <div id="message" class="message" role="status" aria-live="polite"></div>
+    <ul id="checks" class="checks"></ul>
+  </main>
+
+  <script type="module" src="options.js"></script>
+</body>
+</html>
