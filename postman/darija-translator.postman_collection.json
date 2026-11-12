@@ -154,6 +154,53 @@
       ]
     },
     {
+      "name": "No credentials - 401",
+      "request": {
+        "auth": { "type": "noauth" },
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"text\": \"Hello\"\n}" },
+        "url": "{{baseUrl}}/api/translate"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('401 Unauthorized', () => pm.response.to.have.status(401));",
+              "pm.test('Basic challenge', () => pm.expect(pm.response.headers.get('WWW-Authenticate')).to.include('Basic'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Wrong password - 401",
+      "request": {
+        "auth": {
+          "type": "basic",
+          "basic": [
+            { "key": "username", "value": "{{username}}", "type": "string" },
+            { "key": "password", "value": "definitely-not-the-password", "type": "string" }
+          ]
+        },
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"text\": \"Hello\"\n}" },
+        "url": "{{baseUrl}}/api/translate"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": ["pm.test('401 Unauthorized', () => pm.response.to.have.status(401));"]
+          }
+        }
+      ]
+    },
+    {
       "name": "Malformed JSON - 400",
       "request": {
         "method": "POST",
