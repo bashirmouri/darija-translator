@@ -13,6 +13,14 @@
     <!-- host="*" so a phone on the same Wi-Fi can reach the service. HTTP only: trusted LAN use. -->
     <httpEndpoint id="defaultHttpEndpoint" host="*" httpPort="${http.port}" httpsPort="-1"/>
 
+    <!-- Every request carries Basic Auth, so no login cookie (SSO) is needed: the API stays stateless. -->
+    <webAppSecurity singleSignonEnabled="false"/>
+
+    <!-- Liberty still needs an LTPA key file (created locally in target/, never committed) to build the
+         authenticated user. Its password is normally generated into server.env, but our server.env
+         replaces that file, which made every login fail with 403. This value only protects that local file. -->
+    <ltpa keysPassword="darija-local-ltpa-keys"/>
+
     <webApplication location="darija-translator.war" contextRoot="/"/>
 
     <!-- Keep the dev-mode log quiet: no request details at INFO level. -->
