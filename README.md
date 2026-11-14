@@ -122,7 +122,21 @@ _TODO_
 
 ### Python client
 
-_TODO_
+A [Streamlit](https://streamlit.io) app ([`python/app.py`](python/app.py)) using `requests` with Basic Auth.
+It shows a health check in the sidebar, a text area, an Arabic / Arabizi selector, the result right-to-left
+(plus a copyable code block) and the API's error messages.
+
+```bash
+cd python
+python -m venv .venv
+.venv\Scripts\activate          # macOS/Linux: source .venv/bin/activate
+pip install -r requirements.txt
+copy .env.example .env          # macOS/Linux: cp .env.example .env  — then fill in the values
+streamlit run app.py            # opens http://localhost:8501
+```
+
+`python/.env` (gitignored) holds `DARIJA_API_URL`, `DARIJA_USERNAME` and `DARIJA_PASSWORD`;
+real environment variables take precedence over the file.
 
 ### Mobile client
 
