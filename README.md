@@ -152,7 +152,30 @@ real environment variables take precedence over the file.
 
 ### Mobile client
 
-_TODO_
+A React Native app ([`mobile/`](mobile/), Expo, TypeScript) that runs in **Expo Go**. Two screens:
+**Translate** (text, Arabic / Arabizi toggle, RTL result, copy, read aloud with `expo-speech`) and
+**Settings** (server URL, username, password, "Test connection"; saved encrypted with `expo-secure-store`).
+
+The phone must reach the server over Wi-Fi, so the URL is the **PC's LAN IP**, never `localhost`
+(on the phone, `localhost` is the phone itself).
+
+1. Find the PC's IP: run `ipconfig` and take the IPv4 address under **Wireless LAN adapter Wi-Fi**
+   (ignore VirtualBox/VMware adapters such as `192.168.56.x`).
+2. Put the phone on the **same Wi-Fi**. On first start, Windows may ask whether Java can use the network:
+   allow **private networks**, otherwise the firewall blocks port 9080.
+3. Check from the phone's browser: `http://<PC-IP>:9080/api/health` should show `{"status":"ok",...}`.
+4. Configure and start:
+
+```bash
+cd mobile
+npm install
+copy .env.example .env      # macOS/Linux: cp — then set EXPO_PUBLIC_API_URL, _USERNAME, _PASSWORD
+npx expo start              # scan the QR code with Expo Go (Android) or the Camera app (iOS)
+```
+
+`mobile/.env` is gitignored. Its values are only defaults: the Settings screen can change them on the phone.
+Note that `EXPO_PUBLIC_*` values are embedded in the JavaScript bundle, which is fine for a local demo
+but not for a published app.
 
 ## API reference
 
