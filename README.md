@@ -118,7 +118,19 @@ Without the permission Chrome blocks the request and the panel reports "Server n
 
 ### PHP client
 
-_TODO_
+A single page ([`php/index.php`](php/index.php)): a form, plain cURL with `CURLOPT_USERPWD`, a 40 s timeout,
+the result right-to-left and the API's error messages. No Composer. All output is escaped with `htmlspecialchars`.
+
+```bash
+cd php
+copy config.example.php config.php   # macOS/Linux: cp — then fill in api_url, username, password
+php -S localhost:8000                # open http://localhost:8000
+```
+
+`php/config.php` is gitignored. The page needs PHP's **curl** extension. A Windows PHP without a `php.ini`
+(e.g. installed with `winget install PHP.PHP.8.4`) does not load it: in the PHP folder, copy
+`php.ini-development` to `php.ini`, then uncomment `extension_dir = "ext"` and `extension=curl`.
+Check with `php -m` (the list must contain `curl`).
 
 ### Python client
 
