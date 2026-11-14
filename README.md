@@ -4,15 +4,54 @@ An LLM-powered RESTful web service that translates text (any language, usually E
 **Moroccan Arabic (Darija)**, with four clients: a Chrome extension, a PHP web form, a Python
 (Streamlit) app and a React Native (Expo) mobile app.
 
-> Work in progress — sections are filled in as each phase is completed.
-
 ## Features
 
-_TODO_
+- **REST API** `POST /api/translate`: any source language (auto-detected, or given as `sourceLang`) into
+  Moroccan Darija, explicitly *not* Modern Standard Arabic, in **Arabic script** or **Arabizi**
+  (Latin letters with 3, 7, 9…). `GET /api/health` for a reachability check.
+- **LLM-powered** by Google Gemini, called directly over HTTPS with a single, tested prompt and few-shot examples
+  ([`docs/prompt.md`](docs/prompt.md)).
+- **Secured** with HTTP Basic authentication (Jakarta Security, one configured user).
+- **Consistent errors**: every failure maps to a status code (400, 401, 429, 502) and, except 401,
+  a JSON `{ "error": "…" }` body that all clients show to the user.
+- **Four clients**:
+  - **Chrome extension**: select text on any page → right-click → *Translate to Darija* → the side panel opens
+    with the text already filled in and translated; copy and read aloud.
+  - **PHP** web form (plain cURL).
+  - **Python** Streamlit app.
+  - **React Native** app for Android/iOS (Expo Go), reaching the server over Wi-Fi.
 
 ## Architecture
 
-_TODO: embed class and deployment diagrams from `docs/`._
+```
+ Chrome extension ─┐
+ PHP web form ─────┤  HTTP + JSON        ┌──────────────── Open Liberty :9080 ───────────────┐   HTTPS
+ Streamlit app ────┼─ Basic Auth ───────►│ Jakarta Security → TranslatorResource              │──────────► Gemini API
+ Mobile (Expo Go) ─┘  (LAN for phone)    │    → PromptBuilder → TranslationProvider (Gemini) │
+                                         └────────────────────────────────────────────────────┘
+```
+
+The server is a small layered Jakarta EE application (package `com.darija.translator`):
+
+| Package | Responsibility |
+|---|---|
+| `rest` | JAX-RS application, the two resources, exception mappers |
+| `dto` | request/response records and the `Script` enum |
+| `llm` | `TranslationProvider` interface, `GeminiTranslationProvider`, `PromptBuilder` |
+| `security` | Basic Auth mechanism and the identity store |
+| `error` | `TranslationException` hierarchy, each subclass knowing its HTTP status |
+
+**Class diagram**
+
+![Class diagram](docs/class-diagram.png)
+
+**Deployment diagram**
+
+![Deployment diagram](docs/deployment-diagram.png)
+
+Also in `docs/`: the [use case diagram](docs/use-case-diagram.png) and the
+[sequence diagram](docs/sequence-diagram.png) of the extension's right-click flow.
+PlantUML sources (`.puml`) sit next to each image.
 
 ## Repository layout
 
@@ -28,7 +67,34 @@ _TODO: embed class and deployment diagrams from `docs/`._
 
 ## Tech stack and design choices
 
-_TODO_
+| Choice | Why |
+|---|---|
+| **Java 21 + Jakarta EE 10** (JAX-RS, CDI, JSON-B/JSON-P, Security, MicroProfile Config) | Standard APIs required by the course; no framework lock-in. |
+| **Open Liberty via `liberty-maven-plugin`** | Runtime downloaded by Maven, `mvn liberty:dev` gives hot reload and nothing to install. |
+| **Gemini through `java.net.http.HttpClient`** (no SDK) | One small REST call; avoids a heavy dependency and keeps the API key in a header. |
+| **`TranslationProvider` interface** | The resource does not know which LLM it uses; another provider (e.g. a local Ollama model) can be added without touching it. |
+| **One `PromptBuilder` with few-shot examples** | A single, unit-tested place for the prompt, tuned in Google AI Studio before coding. |
+| **Exceptions that carry their HTTP status + one mapper** | Resources and providers just throw; the API's error format is defined in one place. |
+| **Basic Auth + custom `IdentityStore`** | Simplest standard mechanism every client can use; constant-time password check. |
+| **Config from environment variables (`server.env`)** | Secrets stay out of git; a missing variable stops the app with a message that names it. |
+| **No CORS filter** | No client needs one: the extension uses `host_permissions`, PHP and Streamlit call from their server side, React Native is not a browser. |
+| **Plain JavaScript extension, no build step** | Load unpacked and go; side panel API for a persistent translator. |
+| **Expo / Expo Go** | Run the React Native app on a real phone without Android Studio or Xcode. |
+
+## Testing
+
+- **Unit tests** (JUnit 5, 26 tests): prompt building (scripts, source language, injection-safe placeholders),
+  request validation, `Script` parsing, the exception mapper and the identity store. No test calls Gemini.
+
+  ```bash
+  cd server && mvn -q verify
+  ```
+
+- **Postman**: [`postman/darija-translator.postman_collection.json`](postman/darija-translator.postman_collection.json)
+  covers health, translate (Arabic and Arabizi), 400 (blank, too long, bad script, malformed JSON) and 401
+  (no credentials, wrong password), each with assertions. Set the `username` / `password` collection variables
+  and use *Run collection*.
+- **curl** examples are in the [API reference](#api-reference) below.
 
 ## Prerequisites
 
@@ -259,15 +325,31 @@ Import it, then set the `baseUrl`, `username` and `password` collection variable
   (`.gitignore` covers `.env`, `server.env` and `php/config.php`). The Gemini key is sent in the
   `x-goog-api-key` header, never in a URL, and neither keys, passwords nor the text to translate are logged.
 
+## Troubleshooting
+
+| Symptom | Cause and fix |
+|---|---|
+| Every page is a Liberty "Context Root Not Found" 404 | The app did not start. The console shows `CWWKZ0002E` and names the missing variable (`Failed to Inject @ConfigProperty for key …`): add it to `server.env` and restart. |
+| `502` "Gemini HTTP 503" | Google's model is overloaded. Retry after a minute, or set `GEMINI_MODEL` to a lighter model such as a Flash-Lite one. |
+| `502` "Gemini HTTP 404" / "misconfigured" | Wrong `GEMINI_MODEL` (check the exact name, without `models/`, `< >` or quotes). |
+| `502` "did not answer in time" | Gemini took more than 30 s; retry. |
+| `401` with the right password | The password contains `!` or non-ASCII characters, which Liberty's Windows start script mangles in `server.env`. |
+| Extension: "Server not reachable" | Server not running, or the URL is not in `host_permissions` in `manifest.json`. |
+| Phone cannot connect | Wrong IP (use the Wi-Fi adapter's), phone on another network, or Windows firewall blocking Java on private networks. |
+
 ## Screenshots
 
-_TODO_
+Screenshots go in [`docs/screenshots/`](docs/screenshots/):
+
+| Chrome extension | PHP | Streamlit | Mobile |
+|---|---|---|---|
+| ![Extension](docs/screenshots/extension.png) | ![PHP](docs/screenshots/php.png) | ![Streamlit](docs/screenshots/python.png) | ![Mobile](docs/screenshots/mobile.png) |
 
 ## Demo video and blog
 
-- Demo video: _TODO_
-- Blog post: _TODO_
+- Demo video (5 min): _link to be added_ — script in [`docs/demo-script.md`](docs/demo-script.md)
+- Blog post: _link to be added_ — draft in [`docs/blog-draft.md`](docs/blog-draft.md)
 
 ## Author
 
-_TODO: author and course._
+Bashir Mouri — _course name, university, year to be added_
