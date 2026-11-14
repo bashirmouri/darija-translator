@@ -8,7 +8,7 @@ title Darija Translator — Deployment Diagram
 node "Developer PC\n(Windows / macOS / Linux)" as pc {
 
   node "JVM 21+" as jvm <<execution environment>> {
-    node "Open Liberty\n(liberty-maven-plugin, :9080, host=\"*\")" as liberty <<web server>> {
+    node "Open Liberty\n(liberty-maven-plugin, :9080, host = *)" as liberty <<web server>> {
       artifact "darija-translator.war" as war
       component "TranslatorResource\nPOST /api/translate" as res
       component "HealthResource\nGET /api/health" as healthres

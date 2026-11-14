@@ -3,6 +3,7 @@
 skinparam classAttributeIconSize 0
 skinparam shadowing false
 skinparam packageStyle rectangle
+set separator none
 skinparam nodesep 30
 skinparam ranksep 50
 hide empty members
