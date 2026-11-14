@@ -44,8 +44,8 @@ else valid credentials
   Sec -> Res : translate(request)
   deactivate Sec
   activate Res
-  alt text blank or > 5,000 chars
-    Res --> Panel : 400 { error }
+  alt text blank, > 5,000 chars or invalid script
+    Res --> Panel : 400 { error }\n(InvalidRequestException via TranslationExceptionMapper)
   else valid request
     Res -> PB : build(text, sourceLang, script)
     PB --> Res : prompt
@@ -60,17 +60,17 @@ else valid credentials
       deactivate Res
       Panel -> User : show translation
       opt read aloud
-        User -> Panel : click speaker icon
+        User -> Panel : click "Read aloud"
         Panel -> Panel : speechSynthesis.speak()\n(ar-MA voice, else ar)
       end
     else quota exceeded
       Gemini --> Prov : 429
       Prov --> Res : RateLimitException
-      Res --> Panel : 429 { error }
+      Res --> Panel : 429 { error }\n(via TranslationExceptionMapper)
     else LLM error
-      Gemini --> Prov : 5xx / empty
+      Gemini --> Prov : other error / empty / timeout (30 s)
       Prov --> Res : ProviderException
-      Res --> Panel : 502 { error }
+      Res --> Panel : 502 { error }\n(via TranslationExceptionMapper)
     end
   end
 end

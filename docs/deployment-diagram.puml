@@ -7,16 +7,17 @@ title Darija Translator — Deployment Diagram
 
 node "Developer PC\n(Windows / macOS / Linux)" as pc {
 
-  node "JVM 21" as jvm <<execution environment>> {
-    node "Open Liberty\n(embedded, liberty-maven-plugin)" as liberty <<web server>> {
+  node "JVM 21+" as jvm <<execution environment>> {
+    node "Open Liberty\n(liberty-maven-plugin, :9080, host=\"*\")" as liberty <<web server>> {
       artifact "darija-translator.war" as war
       component "TranslatorResource\nPOST /api/translate" as res
-      component "Jakarta Security\nBasic Auth + IdentityStore" as sec
+      component "HealthResource\nGET /api/health" as healthres
+      component "Jakarta Security\nBasic Auth + AppIdentityStore" as sec
     }
   }
 
   node "Google Chrome" as chrome <<browser>> {
-    artifact "Darija extension\n(Manifest V3)" as ext
+    artifact "Darija extension\n(Manifest V3 side panel)" as ext
   }
 
   node "PHP 8 built-in server\n:8000" as php <<execution environment>> {
@@ -27,11 +28,7 @@ node "Developer PC\n(Windows / macOS / Linux)" as pc {
     artifact "app.py\n(requests client)" as pyapp
   }
 
-  node "Ollama :11434\n(optional, extra)" as ollama <<execution environment>> {
-    artifact "local LLM model" as localmodel
-  }
-
-  artifact ".env\n(API key, users)" as env
+  artifact "server.env\n(gitignored: Gemini key,\nmodel, credentials)" as env
 }
 
 node "Smartphone\n(Android / iOS)" as phone {
@@ -50,6 +47,5 @@ pyapp --> liberty : HTTP/JSON + Basic Auth\nlocalhost:9080
 rn --> liberty : HTTP/JSON + Basic Auth\nWi-Fi LAN <PC-IP>:9080
 
 liberty --> gemini : HTTPS REST :443\nx-goog-api-key
-liberty ..> ollama : HTTP :11434\n(LLM_PROVIDER=ollama)
-liberty ..> env : reads config
+liberty ..> env : MicroProfile Config\n(environment variables)
 @enduml
